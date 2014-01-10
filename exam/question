@@ -1,0 +1,70 @@
+
+# restore using mongorestore
+$ mongorestore messages.bson -d enron -c messages
+
+$ mongo
+> use enron
+
+> db.messages.count()
+120477
+
+# Question 1
+
+> db.messages.find({
+    "headers.From" : "andrew.fastow@enron.com",
+    "headers.To" : "john.lavorato@enron.com"
+}).count()
+1
+
+> db.messages.find({
+    "headers.From" : "andrew.fastow@enron.com",
+    "headers.To" : "jeff.skilling@enron.com"
+}).count()
+
+# Question 2
+
+> db.messages.aggregate( 
+    { $project : { from : "$headers.From", to : "$headers.To" } }, 
+    { $unwind : "$to" }, 
+    { $group : { _id : { _id:"$_id", from:"$from", to:"$to" } } }, 
+    { $group : { _id : { from:"$_id.from", to:"$_id.to" } , number : { $sum : 1 } } },
+    { $sort : { number : -1 } },
+    { $limit : 1 }
+    )
+
+
+### RETURN
+{
+	"result" : [
+		{
+			"_id" : {
+				"from" : "susan.mara@enron.com",
+				"to" : "jeff.dasovich@enron.com"
+			},
+			"number" : 750
+		}
+	],
+	"ok" : 1
+}
+
+# Question 3
+
+> db.messages.update(
+    { "headers.Message-ID" : "<8147308.1075851042335.JavaMail.evans@thyme>" },
+    { $push : { "headers.To" : "mrpotatohead@10gen.com" } }
+    )
+
+# Question 4
+> db.posts.find(
+    {permalink: 'TLxrBfyxTZjqOKqxgnUP'}, 
+    {"comments": {$slice: 2}}
+    ).pretty()
+
+  # Increate the 3rd comment's num_likes by 1
+> db.posts.update( 
+    {permalink: 'TLxrBfyxTZjqOKqxgnUP'}, 
+    {$inc: {"comments.2.num_likes": 1}}, 
+    {upsert:0, multi:0} 
+    ).pretty()
+
+# Question 5    
